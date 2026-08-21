@@ -1,7 +1,7 @@
 // ============================================================
 // Retreaver chat bot engine — chatbot.js
-// Version: 1.1.0
-// sha256: ae8cdfc47daa83d0fc86f3f5ea1562c1f04262db94448794de08069d57b55b6c
+// Version: 1.4.0
+// sha256: 39c90d38f39e71645e1088ed828ce3c25de55135ca83eab569f2a654590bb115
 //
 // The sha256 above is the checksum of this file WITHOUT the sha256 line
 // itself. In ?debug=1 mode the engine re-hashes its own source and warns
@@ -78,7 +78,7 @@ const ChatBot = (function() {
     }
 
     async function showAgentTyping(container) {
-        typingHTML = `<div id="typingIndicator" class="bg-gray-200 p-3 rounded-lg shadow-xs mt-2 inline-block">
+        typingHTML = `<div id="typingIndicator" class="chat-bubble">
         <div class="typing-animation">
           <div class="typing-dot"></div>
           <div class="typing-dot"></div>
@@ -98,8 +98,8 @@ const ChatBot = (function() {
 
     function appendMessage(container, text) {
         container.innerHTML += `
-            <div class="bg-gray-200 p-3 rounded-lg shadow-xs mb-2 w-fit">
-                <p class="text-md text-gray-800">${text}</p>
+            <div class="chat-bubble">
+                <p>${text}</p>
             </div>
         `
 
@@ -109,17 +109,13 @@ const ChatBot = (function() {
     function appendButtons(container, buttonsArray, step) {
 
         const wrapper = document.createElement('div');
-        wrapper.classList = 'bg-gray-200 p-3 rounded-lg shadow-xs mb-2 w-fit';
+        wrapper.classList = 'chat-bubble';
         wrapper.id = Math.random().toString(16).slice(2);
-
-        const anotherWrapperForStyling = document.createElement('div');
-        anotherWrapperForStyling.classList = 'grid grid-rows-1 grid-cols-1 gap-y-3'
-        wrapper.appendChild(anotherWrapperForStyling);
 
         buttonsArray.forEach(btnData => {
 
             const btn = document.createElement('button');
-            btn.classList = 'chat-button text-white font-bold bg-blue-500 rounded-full py-3 px-12';
+            btn.classList = 'chat-button';
             btn.textContent = btnData.text;
             btn.value = btnData.value;
             btn.addEventListener('click', (event) => {
@@ -137,7 +133,7 @@ const ChatBot = (function() {
                 scroll();
             });
 
-            anotherWrapperForStyling.appendChild(btn);
+            wrapper.appendChild(btn);
         });
 
         container.appendChild(wrapper);
@@ -148,27 +144,23 @@ const ChatBot = (function() {
         const container = chatContainer.children[chatContainer.children.length - 1].getElementsByClassName('agent-chat')[0];
 
         const wrapper = document.createElement('div');
-        wrapper.classList = 'bg-gray-200 p-3 rounded-lg shadow-xs mb-2 w-fit py-6';
+        wrapper.classList = 'chat-bubble';
 
-        const btnParent = document.createElement('div');
         const btn = document.createElement('a');
-        btn.classList = 'text-white font-bold bg-blue-500 rounded-full py-3 px-8';
+        btn.classList = 'chat-button';
         btn.textContent = formatPhoneNumber(window.callForActionNumber);
         btn.href = `tel: ${window.callForActionNumber}`
 
-        btnParent.appendChild(btn);
-
         let remainingTime = 30
         const timerParent = document.createElement("div");
-        timerParent.classList = 'pt-5 font-bold'
+        timerParent.classList = 'chat-timer'
 
         const timer = document.createElement("span");
         timer.id = 'timer';
-        timer.style = 'color: red;'
         timerParent.innerText = 'Your call is reserved for: ';
         timerParent.appendChild(timer);
 
-        wrapper.appendChild(btnParent);
+        wrapper.appendChild(btn);
         wrapper.appendChild(timerParent);
         container.appendChild(wrapper);
 
@@ -203,11 +195,9 @@ const ChatBot = (function() {
 
     async function moveAgentToStep(step) {
         chatContainer.innerHTML += `
-      <div class="flex items-end w-5/6 pb-4">
-        <div class="flex-shrink-0">
-          <img class="w-8 h-8 rounded-full" src="assets/img/agent.svg" alt="Agent Avatar">
-        </div>
-        <div class='ml-3 agent-chat'></div>
+      <div class="chat-row">
+        <img class="chat-avatar" src="assets/img/agent.png" alt="Agent Avatar">
+        <div class="agent-chat"></div>
       </div>`;
         const lastAgentContainer = chatContainer.children[chatContainer.children.length - 1].getElementsByClassName('agent-chat')[0];
 
@@ -253,11 +243,9 @@ const ChatBot = (function() {
 
     function userAnswers(text) {
         chatContainer.innerHTML += `
-    <div class='flex items-start justify-end'>
-      <div class="flex-shrink-0 order-last">
-        <img class="w-8 h-8 rounded-full" src="assets/img/profile.svg" alt="User Avatar">
-      </div>
-      <div class='mr-3 receiver-chat'></div>
+    <div class="chat-row chat-row-user">
+      <div class="receiver-chat"></div>
+      <img class="chat-avatar" src="assets/img/profile.png" alt="User Avatar">
     </div>
     `
 
@@ -279,13 +267,16 @@ const ChatBot = (function() {
 
     let startUpError = null;
     let engineWarning = null;
-    let fallbackNumber = null;
+    let staticNumber = null;
 
     function showDebugTags() {
         const urlParams = new URLSearchParams(window.location.search);
         const debug = urlParams.get('debug');
 
         if (debug){
+            // Highlights the "customizable" elements in index.html.
+            document.body.classList.add('debug-mode');
+
             const debugEl = document.getElementById("debug");
             debugEl.classList.remove('hidden');
             let text = `Debug — tags that will be added to the number: ${JSON.stringify(window.userTags || {}, null, 2)}`;
@@ -295,11 +286,11 @@ const ChatBot = (function() {
             if (engineWarning) {
                 text += `\n⚠ ${engineWarning}`;
             }
-            if (fallbackNumber) {
-                text += `\nFallback number: ${fallbackNumber}`;
-                text += window.callForActionNumber === fallbackNumber
-                    ? `\nNumber displayed: ${window.callForActionNumber} (still the fallback — no Retreaver number yet)`
-                    : `\nNumber displayed: ${window.callForActionNumber} (Retreaver number — fallback replaced ✓)`;
+            if (staticNumber) {
+                text += `\nStatic number: ${staticNumber}`;
+                text += window.callForActionNumber === staticNumber
+                    ? `\nNumber displayed: ${window.callForActionNumber} (still the static number — no Retreaver number yet)`
+                    : `\nNumber displayed: ${window.callForActionNumber} (Retreaver number — static number replaced ✓)`;
             }
             debugEl.textContent = text;
             // The banner is fixed; push the page down so it hides nothing.
@@ -334,10 +325,10 @@ const ChatBot = (function() {
     }
 
     function setCallForActionNumber(number) {
-        // The first number set is the fallback (callForAction sets it
+        // The first number set is the static one (callForAction sets it
         // before requesting a Retreaver number). Remember it so debug
         // mode can show whether it got replaced.
-        fallbackNumber ??= number;
+        staticNumber ??= number;
         window.callForActionNumber = number;
         showDebugTags();
     }

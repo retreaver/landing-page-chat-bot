@@ -1,7 +1,138 @@
+/* ============================================================
+   Chat bot component styles.
+
+   The chat markup only uses the selectors below, so everything
+   visual about the bot lives in this one file — edit it freely
+   to restyle your chat bot. The rest of the page (headline,
+   footer, ...) is styled with Tailwind classes in index.html.
+   ============================================================ */
+
+/* Toggled by the engine to show/hide the debug banner and the
+   "Chat Closed" divider. */
+.hidden {
+    display: none !important;
+}
+
+/* One message row: an avatar plus a stack of bubbles. */
+.chat-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    width: 83.333%;
+    padding-bottom: 1rem;
+}
+
+/* Visitor answers: same row, mirrored to the right. */
+.chat-row-user {
+    align-items: flex-start;
+    justify-content: flex-end;
+    width: auto;
+    padding-bottom: 0;
+}
+
+.chat-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+
+/* The gray box used for messages, answer buttons, the typing
+   dots and the click-to-call block. Children stack vertically
+   with a small gap. */
+.chat-bubble {
+    display: grid;
+    row-gap: 0.75rem;
+    width: fit-content;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    background-color: #e5e7eb;
+    border-radius: 0.5rem;
+    color: #1f2937;
+}
+
+/* Answer buttons and the click-to-call link. */
+.chat-button {
+    display: inline-block;
+    padding: 0.75rem 3rem;
+    border: none;
+    border-radius: 9999px;
+    background-color: #3b82f6;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* "Your call is reserved for: MM:SS" under the number. */
+.chat-timer {
+    padding-top: 0.5rem;
+    font-weight: 700;
+}
+
+.chat-timer span {
+    color: #dc2626;
+}
+
+/* The "Chat Closed" divider at the end of the conversation. */
+.chat-closed {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 0;
+    color: #d1d5db;
+    font-size: 0.75rem;
+}
+
+.chat-closed::before,
+.chat-closed::after {
+    content: "";
+    flex-grow: 1;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* The orange ?debug=1 banner at the top of the screen. */
+#debug {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 0.75rem;
+    background-color: #f97316;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    color: #ffffff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    text-align: left;
+    white-space: pre-wrap;
+}
+
+/* Elements marked "customizable" in index.html are the ones meant
+   to be edited (agent name, header text, ...). In debug mode the
+   engine adds .debug-mode to <body> and they light up green. */
+.debug-mode .customizable {
+    background-color: #dcfce7;
+}
+
+.debug-mode .customizable::after {
+    content: "this setting is customizable in the index.html page";
+    display: block;
+    color: #15803d;
+    font-size: 0.625rem;
+    font-weight: 400;
+    text-align: center;
+}
+
+/* The typing dots animation. */
 .typing-animation {
     display: inline-flex;
     align-items: center;
 }
+
 .typing-dot {
     width: 8px;
     height: 8px;
@@ -10,6 +141,7 @@
     margin-right: 4px;
     animation: typing 1s infinite;
 }
+
 @keyframes typing {
     0% {
         opacity: 0.3;
@@ -24,4 +156,3 @@
         transform: scale(1);
     }
 }
-
