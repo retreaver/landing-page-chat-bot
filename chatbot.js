@@ -1,3 +1,17 @@
+// ============================================================
+// Retreaver chat bot engine — chatbot.js
+// Version: 1.1.0
+// sha256: ae8cdfc47daa83d0fc86f3f5ea1562c1f04262db94448794de08069d57b55b6c
+//
+// The sha256 above is the checksum of this file WITHOUT the sha256 line
+// itself. In ?debug=1 mode the engine re-hashes its own source and warns
+// in the debug banner when the file has been edited and no longer
+// matches the Retreaver release.
+//
+// After deliberately editing this file, refresh the checksum with:
+//   grep -v '^// sha256:' chatbot.js | shasum -a 256
+// ============================================================
+
 window.onload = function () {
     ChatBot.init()
 }
@@ -13,6 +27,47 @@ const ChatBot = (function() {
             console.error("You need to have a callForAction function defined.")
         } else if (!window.retreaverCampaignKey) {
             console.error("You need to have a retreaverCampaignKey function defined.")
+        }
+
+        verifyEngineIntegrity();
+    }
+
+    // Re-hashes the served chatbot.js and compares it against the sha256
+    // recorded in the header comment (which is computed over the file
+    // without the sha256 line itself). Runs only in ?debug=1 mode; a
+    // mismatch is reported in the debug banner.
+    async function verifyEngineIntegrity() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.get('debug') || !window.crypto?.subtle) {
+            return;
+        }
+
+        try {
+            const source = await (await fetch('chatbot.js')).text();
+            const lines = source.split('\n');
+            if (lines[lines.length - 1] === '') {
+                lines.pop();
+            }
+            const shaLine = lines.find(line => line.startsWith('// sha256:'));
+            if (!shaLine) {
+                engineWarning = 'chatbot.js has no "// sha256:" header line — cannot compare it against the Retreaver release.';
+                showDebugTags();
+                return;
+            }
+
+            const expected = shaLine.replace('// sha256:', '').trim();
+            // Reproduce `grep -v '^// sha256:'` byte for byte: grep emits
+            // every line, including the last, with a trailing newline.
+            const hashedSource = lines.filter(line => !line.startsWith('// sha256:')).map(line => line + '\n').join('');
+            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hashedSource));
+            const actual = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+            if (actual !== expected) {
+                engineWarning = `chatbot.js is different from the Retreaver code: its sha256 (${actual}) does not match the checksum in its header (${expected}).`;
+                showDebugTags();
+            }
+        } catch (error) {
+            console.error('Could not verify chatbot.js integrity:', error);
         }
     }
 
@@ -223,6 +278,8 @@ const ChatBot = (function() {
     }
 
     let startUpError = null;
+    let engineWarning = null;
+    let fallbackNumber = null;
 
     function showDebugTags() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -234,6 +291,15 @@ const ChatBot = (function() {
             let text = `Debug — tags that will be added to the number: ${JSON.stringify(window.userTags || {}, null, 2)}`;
             if (startUpError) {
                 text += `\n⚠ startUp() error: ${startUpError}`;
+            }
+            if (engineWarning) {
+                text += `\n⚠ ${engineWarning}`;
+            }
+            if (fallbackNumber) {
+                text += `\nFallback number: ${fallbackNumber}`;
+                text += window.callForActionNumber === fallbackNumber
+                    ? `\nNumber displayed: ${window.callForActionNumber} (still the fallback — no Retreaver number yet)`
+                    : `\nNumber displayed: ${window.callForActionNumber} (Retreaver number — fallback replaced ✓)`;
             }
             debugEl.textContent = text;
             // The banner is fixed; push the page down so it hides nothing.
@@ -268,7 +334,12 @@ const ChatBot = (function() {
     }
 
     function setCallForActionNumber(number) {
+        // The first number set is the fallback (callForAction sets it
+        // before requesting a Retreaver number). Remember it so debug
+        // mode can show whether it got replaced.
+        fallbackNumber ??= number;
         window.callForActionNumber = number;
+        showDebugTags();
     }
 
     async function getRetreaverNumber() {

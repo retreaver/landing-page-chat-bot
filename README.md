@@ -112,8 +112,17 @@ parameter mapping instead.
 
 ## Debug mode
 
-Append `?debug=1` to the URL to display the tags collected so far in an
-orange banner at the top of the screen, e.g. https://localhost:8443/?debug=1.
+Append `?debug=1` to the URL to display an orange banner at the top of the
+screen, e.g. https://localhost:8443/?debug=1. The banner shows:
+
+- the tags collected so far;
+- the fallback number and the number currently displayed, so you can see
+  the Retreaver number replace the fallback at the call-for-action step;
+- a warning if `startUp()` threw an error;
+- a warning if `chatbot.js` no longer matches the sha256 checksum recorded
+  in its header — i.e. the engine differs from the Retreaver release. After
+  deliberately editing `chatbot.js`, refresh the checksum with the command
+  in its header comment.
 
 ## Customizing the page
 
