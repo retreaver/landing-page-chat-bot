@@ -24,6 +24,11 @@
     </script>
   </head>
   <body>
+    <!-- Debug banner, shown at the top of the screen with ?debug=1 -->
+    <div
+      id="debug"
+      class="hidden fixed top-0 inset-x-0 z-50 bg-orange-500 text-white text-left text-sm font-mono p-3 shadow-md whitespace-pre-wrap"
+    ></div>
     <main class="min-h-screen">
       <div class="max-w-4xl mx-auto bg-white text-center text-gray-600">
         <div class="p-4">
@@ -59,9 +64,6 @@
             <div id="chat-container">
             </div>
 
-            <div class="text-center">
-              <code id="debug"></code>
-            </div>
             <!-- Disconnect message -->
             <div id="disconnected" class="pt-2 hidden">
               <div class="relative flex py-5 items-center">

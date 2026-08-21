@@ -16,27 +16,6 @@ const ChatBot = (function() {
         }
     }
 
-    function IpAPI() {
-
-        fetch('https://ipapi.co/json/')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(json => {
-            const zipCode = json['postal'];
-            if (zipCode){
-                setTag('ip_zip', zipCode)
-            }
-
-        })
-        .catch(error => {
-            console.error('IP API fetch error:', error);
-        });
-    };
-
     const chatContainer = document.getElementById("chat-container");
 
     function wait(ms) {
@@ -243,16 +222,44 @@ const ChatBot = (function() {
         showDebugTags();
     }
 
+    let startUpError = null;
+
     function showDebugTags() {
         const urlParams = new URLSearchParams(window.location.search);
         const debug = urlParams.get('debug');
 
         if (debug){
-            document.getElementById("debug").innerHTML = `
-            Currently stored tags that will be added to the number:
-                ${JSON.stringify(window.userTags, null, 2)}
-            `;
+            const debugEl = document.getElementById("debug");
+            debugEl.classList.remove('hidden');
+            let text = `Debug — tags that will be added to the number: ${JSON.stringify(window.userTags || {}, null, 2)}`;
+            if (startUpError) {
+                text += `\n⚠ startUp() error: ${startUpError}`;
+            }
+            debugEl.textContent = text;
+            // The banner is fixed; push the page down so it hides nothing.
+            document.body.style.paddingTop = debugEl.offsetHeight + 'px';
         }
+    }
+
+    // Runs the optional startUp() hook from configuration.js. A broken
+    // hook must never stop the chat, so both synchronous throws and
+    // async rejections are contained and reported instead.
+    function runStartUpHook() {
+        if (!window.startUp) {
+            return;
+        }
+
+        try {
+            Promise.resolve(startUp()).catch(reportStartUpError);
+        } catch (error) {
+            reportStartUpError(error);
+        }
+    }
+
+    function reportStartUpError(error) {
+        console.error('startUp() failed:', error);
+        startUpError = error;
+        showDebugTags();
     }
 
     function getTag(tag) {
@@ -306,8 +313,9 @@ const ChatBot = (function() {
     return {
         init: function() {
             checkConfiguration();
+            showDebugTags();
+            runStartUpHook();
             moveAgentToStep('intro');
-            IpAPI();
         },
 
 

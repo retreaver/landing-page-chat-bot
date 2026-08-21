@@ -6,6 +6,7 @@
 //   2. FALLBACK_PHONE_NUMBER   - shown if no Retreaver number is fetched
 //   3. script()                - the messages the bot sends per step
 //   4. chatBot()               - the flow logic between steps
+//   5. startUp()               - optional hook for tags not tied to answers
 // ============================================================
 
 // The Retreaver campaign key used to request a tracking number.
@@ -77,4 +78,45 @@ function retreaverCampaignKey() {
 async function callForAction() {
     ChatBot.setCallForActionNumber(FALLBACK_PHONE_NUMBER);
     await ChatBot.getRetreaverNumber();
+}
+
+// -----------------------------------------------------------
+// Startup hook
+// -----------------------------------------------------------
+// The chat engine calls startUp() once on page load, right before the
+// intro step plays. Use it to collect tags that don't come from chat
+// answers — geo lookups, time of day, device type, and so on. Anything
+// stored with ChatBot.setTag(key, value) here is attached to the
+// Retreaver number (and therefore to the call) when it is requested.
+//
+// Lookups can be async: the chat starts without waiting for them, and
+// tags are only read when the number is requested at the call-for-action
+// step, so a lookup just needs to resolve before the visitor gets there.
+//
+// Errors thrown here can't break the chat: the engine catches them,
+// logs them to the console, and shows them in the ?debug=1 banner.
+//
+// Example: tag the visitor's ZIP code from their IP address via
+// https://ipapi.co. Uncomment the call below to enable it.
+function startUp() {
+    // tagZipCodeFromIp();
+}
+
+function tagZipCodeFromIp() {
+    fetch('https://ipapi.co/json/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(json => {
+            const zipCode = json['postal'];
+            if (zipCode) {
+                ChatBot.setTag('ip_zip_code_from_ipapi', zipCode);
+            }
+        })
+        .catch(error => {
+            console.error('IP API fetch error:', error);
+        });
 }

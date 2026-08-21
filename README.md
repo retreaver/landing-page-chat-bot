@@ -14,12 +14,21 @@ uses the Tailwind CDN.
 ```bash
 git clone git@github.com:retreaver/landing-page-chat-bot.git
 cd landing-page-chat-bot
-python3 -m http.server 8000
+python3 serve.py
 ```
 
-Open http://localhost:8000 and click through the chat. The repo ships
+Open https://localhost:8443 and click through the chat. The repo ships
 preconfigured with a demo Retreaver campaign (`a61d9bf8e52dad27a404e906b776dc2a`),
 so the final step fetches a real tracking number out of the box.
+
+The page must be served over **https**: the Retreaver API scheme follows the
+page protocol, and `api.routingapi.com` is https-only (its HSTS policy makes
+browsers upgrade http requests, which breaks the CORS preflight — you'd see
+`Redirect is not allowed for a preflight request` in the console).
+`serve.py` wraps Python's built-in web server in TLS with a self-signed
+certificate it generates on first run (stored in `.local-certs/`, gitignored).
+Your browser will warn about the certificate once — choose **Advanced →
+Proceed to localhost**.
 
 ## How it works
 
@@ -89,8 +98,13 @@ function chatBot(step, value) {
 
 Anything you store with `ChatBot.setTag(key, value)` is attached to the
 Retreaver number when it is requested, and therefore to the resulting call.
-The bot also automatically tags `ip_zip` with the visitor's ZIP code (looked
-up via [ipapi.co](https://ipapi.co)).
+
+For tags that don't come from chat answers, define them in the optional
+`startUp()` hook in `configuration.js` — the engine calls it once on page
+load, before the intro step plays. `configuration.js` ships with a
+commented-out example that tags `ip_zip_code_from_ipapi` with the visitor's ZIP code
+(looked up via [ipapi.co](https://ipapi.co)); uncomment the
+`tagZipCodeFromIp()` call inside `startUp()` to enable it.
 
 URL parameters (sub IDs, affiliate IDs, click IDs, etc.) should **not** be
 tagged from this script — handle them with your Retreaver campaign's
@@ -98,8 +112,8 @@ parameter mapping instead.
 
 ## Debug mode
 
-Append `?debug=1` to the URL to display the tags collected so far underneath
-the chat, e.g. http://localhost:8000/?debug=1.
+Append `?debug=1` to the URL to display the tags collected so far in an
+orange banner at the top of the screen, e.g. https://localhost:8443/?debug=1.
 
 ## Customizing the page
 
