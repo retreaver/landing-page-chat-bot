@@ -1,7 +1,7 @@
 // ============================================================
 // Retreaver chat bot engine — chatbot.js
-// Version: 1.4.0
-// sha256: 39c90d38f39e71645e1088ed828ce3c25de55135ca83eab569f2a654590bb115
+// Version: 1.9.0
+// sha256: 8f21d4ab850d13b7e5425755d3d48b301b5eb23ef5d0526967d2a43ce97dcecd
 //
 // The sha256 above is the checksum of this file WITHOUT the sha256 line
 // itself. In ?debug=1 mode the engine re-hashes its own source and warns
@@ -267,6 +267,8 @@ const ChatBot = (function() {
 
     let startUpError = null;
     let engineWarning = null;
+    let numberWarning = null;
+    let numberTags = null;
     let staticNumber = null;
 
     function showDebugTags() {
@@ -279,12 +281,27 @@ const ChatBot = (function() {
 
             const debugEl = document.getElementById("debug");
             debugEl.classList.remove('hidden');
-            let text = `Debug — tags that will be added to the number: ${JSON.stringify(window.userTags || {}, null, 2)}`;
+
+            // Everything that ends up on the number in one place: the tags
+            // it already carries (Retreaver parameter mapping etc.),
+            // overridden by the tags collected in this session.
+            const tagsOnNumber = {};
+            (numberTags || []).forEach(tag => {
+                if (tag && tag.key !== undefined) {
+                    tagsOnNumber[tag.key] = tag.value;
+                }
+            });
+            Object.assign(tagsOnNumber, window.userTags || {});
+
+            let text = `Debug — tags on the number: ${JSON.stringify(tagsOnNumber, null, 2)}`;
             if (startUpError) {
                 text += `\n⚠ startUp() error: ${startUpError}`;
             }
             if (engineWarning) {
                 text += `\n⚠ ${engineWarning}`;
+            }
+            if (numberWarning) {
+                text += `\n⚠ ${numberWarning}`;
             }
             if (staticNumber) {
                 text += `\nStatic number: ${staticNumber}`;
@@ -324,6 +341,12 @@ const ChatBot = (function() {
         return window.userTags[tag];
     }
 
+    function reportNumberWarning(message) {
+        console.error(message);
+        numberWarning = message;
+        showDebugTags();
+    }
+
     function setCallForActionNumber(number) {
         // The first number set is the static one (callForAction sets it
         // before requesting a Retreaver number). Remember it so debug
@@ -348,18 +371,55 @@ const ChatBot = (function() {
 
                 const campaign = new Retreaver.Campaign({ campaign_key: campaign_key });
 
-                const retreaverNumber = await new Promise((resolve, reject) => {
+                try {
+                    const retreaverNumber = await new Promise((resolve, reject) => {
 
-                    campaign.request_number(function (number) {
+                        // The JS API only runs its callbacks when it gets a
+                        // parseable response, so guard against network
+                        // errors with a timeout.
+                        const guard = setTimeout(() => {
+                            reject(new Error('The Retreaver number request got no response — network error or invalid response.'));
+                        }, 10000);
 
-                        if (window.userTags){
-                            number.replace_tags(window.userTags);
-                        }
+                        campaign.request_number({}, function (number) {
+                            clearTimeout(guard);
 
-                        resolve(number.get("number"));
+                            // Tags the number already carries (Retreaver URL
+                            // parameter mapping, pool settings, ...), read
+                            // before our own tags replace anything.
+                            const tagsOnNumber = [].concat(number.get("tag_values") || [], number.get("static_tag_values") || []);
+                            if (tagsOnNumber.length) {
+                                numberTags = tagsOnNumber;
+                                showDebugTags();
+                            }
+
+                            if (window.userTags){
+                                try {
+                                    number.replace_tags(window.userTags);
+                                } catch (error) {
+                                    // A number that cannot carry the tags is
+                                    // useless for tracking — keep the static
+                                    // number instead of replacing it.
+                                    reject(new Error(String(error).includes('per-visitor')
+                                        ? 'Could not attach the tags — "Per Visitor" must be turned on on the campaign\'s number pool. Keeping the static number.'
+                                        : `Could not attach the tags to the number (${error}). Keeping the static number.`));
+                                    return;
+                                }
+                            }
+
+                            resolve(number.get("number"));
+                        }, function (response) {
+                            clearTimeout(guard);
+                            reject(new Error(response && response.status == 404
+                                ? 'The Retreaver number request returned 404 — the campaign probably does not have a number pool.'
+                                : `The Retreaver number request failed: ${JSON.stringify(response)}`));
+                        });
                     });
-                });
-                setCallForActionNumber(retreaverNumber);
+                    setCallForActionNumber(retreaverNumber);
+                } catch (error) {
+                    // The static number set by callForAction() stays displayed.
+                    reportNumberWarning(error.message);
+                }
                 break;
             } else {
 

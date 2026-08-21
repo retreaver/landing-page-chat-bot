@@ -73,7 +73,8 @@ Anything you store with `ChatBot.setTag(key, value)` is attached to the Retreave
 
 For tags that don't come from chat answers, define them in the optional `startUp()` hook in `configuration.js` — the engine calls it once on page load, before the intro step plays. `configuration.js` ships with a commented-out example that tags `ip_zip_code_from_ipapi` with the visitor's ZIP code (looked up via [ipapi.co](https://ipapi.co)); uncomment the `tagZipCodeFromIp()` call inside `startUp()` to enable it.
 
-URL parameters (sub IDs, affiliate IDs, click IDs, etc.) should **not** be tagged from this script — handle them with your Retreaver campaign's parameter mapping instead.
+> [!CAUTION]
+> URL parameters should **not** be tagged from this script — handle them with your Retreaver campaign's parameter mapping instead.
 
 ## Debug mode
 
